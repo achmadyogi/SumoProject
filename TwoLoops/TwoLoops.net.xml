@@ -188,15 +188,31 @@
         <lane id="E6_2" index="2" speed="13.89" length="164.23" shape="104.57,-28.81 203.05,-28.76 202.94,43.40"/>
     </edge>
 
-    <tlLogic id="J1" type="static" programID="1" offset="0">
-        <phase duration="27" state="gGGGrrrrrrgGGGrrrrrrrrrr"/>
-        <phase duration="3"  state="yyyyrrrrrryyyyrrrrrrrrrr"/>
-        <phase duration="27" state="rrrrrgGGGrrrrrrgGGGrrrrr"/>
-        <phase duration="3"  state="rrrrrgyyyrrrrrrgyyyrrrrr"/>
-        <phase duration="22" state="grrrGGrrrrgrrrGGrrrrrrrr"/>
-        <phase duration="3"  state="grrryGrrrrgrrryGrrrrrrrr"/>
-        <phase duration="22" state="GrrrrgrrrGGrrrrgrrrGrrrr"/>
-        <phase duration="3"  state="GrrrryrrryGrrrryrrryrrrr"/>
+<!--    <tlLogic id="J1" type="static" programID="1" offset="0">-->
+<!--        <phase duration="27" state="gGGGrrrrrrgGGGrrrrrrrrrr"/>-->
+<!--        <phase duration="3"  state="yyyyrrrrrryyyyrrrrrrrrrr"/>-->
+<!--        <phase duration="27" state="rrrrrgGGGrrrrrrgGGGrrrrr"/>-->
+<!--        <phase duration="3"  state="rrrrrgyyyrrrrrrgyyyrrrrr"/>-->
+<!--        <phase duration="22" state="grrrGGrrrrgrrrGGrrrrrrrr"/>-->
+<!--        <phase duration="3"  state="grrryGrrrrgrrryGrrrrrrrr"/>-->
+<!--        <phase duration="22" state="GrrrrgrrrGGrrrrgrrrGrrrr"/>-->
+<!--        <phase duration="3"  state="GrrrryrrryGrrrryrrryrrrr"/>-->
+<!--    </tlLogic>-->
+
+    <tlLogic id="J1" type="actuated" programID="1" offset="0">
+        <param key="show-detectors" value="true"/>
+        <param key="max-gap" value="3.0"/>
+        <param key="detector-gap" value="2.0"/>
+        <param key="passing-time" value="2.0"/>
+        <param key="freq" value="300"/>
+        <phase duration="27" minDur="15" maxDur="40" state="gGGGrrrrrrgGGGrrrrrrrrrr"/>
+        <phase duration="3"  state="yyyyrrrrrryyyyrrrrrrrrrr" next="2 4 6 0"/>
+        <phase duration="27" minDur="15" maxDur="40" state="rrrrrgGGGrrrrrrgGGGrrrrr"/>
+        <phase duration="3"  state="rrrrrgyyyrrrrrrgyyyrrrrr" next="4 6 0 2"/>
+        <phase duration="22" minDur="10" maxDur="30" state="grrrGGrrrrgrrrGGrrrrrrrr"/>
+        <phase duration="3"  state="grrryGrrrrgrrryGrrrrrrrr" next="6 0 2 4"/>
+        <phase duration="22" minDur="10" maxDur="30" state="GrrrrgrrrGGrrrrgrrrGrrrr"/>
+        <phase duration="3"  state="GrrrryrrryGrrrryrrryrrrr" next="0 2 4 6"/>
     </tlLogic>
 
     <junction id="J0" type="priority" x="-25.21" y="52.84" incLanes="-E0_0 -E0_1 -E0_2 -E4_0 -E4_1 -E4_2" intLanes=":J0_0_0 :J0_0_1 :J0_0_2 :J0_3_0 :J0_3_1 :J0_3_2" shape="-15.63,43.24 -15.63,62.44 -34.83,62.40 -34.28,56.55 -32.68,51.76 -30.01,48.03 -26.28,45.37 -21.48,43.77">
