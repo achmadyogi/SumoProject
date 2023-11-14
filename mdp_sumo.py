@@ -3,6 +3,7 @@ import random
 import csv
 import sys
 import argparse
+import copy 
 
 class MarkovDecisionProcess:
     '''
@@ -12,6 +13,7 @@ class MarkovDecisionProcess:
         # TODO: delta threshold
         self.terminal_state = terminal_state
         self.csv_data = csv_data
+        # initial state
         self.state = {
             "maxDur": 51,
             "minDur": 11,
@@ -23,20 +25,20 @@ class MarkovDecisionProcess:
 
     def extract_waiting_time(self,csv_data,maxDur,minDur,max_gap,next):
         for entry in csv_data:
+            # Try to fetch from excel
             try:
                 if entry.get('min_dur') == str(minDur) and entry.get('max_dur') == str(maxDur) and entry.get("max_gap") == str(max_gap) and entry.get("next_state") == next:
                     waiting_time = entry.get('waiting_time')
                 return waiting_time
 
+            # If don't have, pass for now.
             except:
-                print("NOT IN FILE!!!")
-                print("parameters")
-                # print(maxDur,minDur,max_gap,next)
+                pass
 
         
     # TODO: Check for convergence 
     def is_terminal(self, state):
-        return state["waitingTime"] == self.terminal_state 
+        return float(state["waitingTime"]) <= self.terminal_state 
 
     def get_actions(self, state):
         actions = [
@@ -74,35 +76,72 @@ class MarkovDecisionProcess:
     def transition_function(self, state, action):
         if action == 'increase_minDur':
             state["minDur"] += 1
+            curr_waitingTime = state["waitingTime"]
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime
+
             return state
         
         elif action == 'decrease_minDur':
             state["minDur"] -= 1
+            curr_waitingTime = state["waitingTime"]            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+
+
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
             return state
         
         elif action == 'increase_maxDur':
             state["maxDur"] += 1
+            curr_waitingTime = state["waitingTime"]            
+            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
             return state
         
         elif action == 'decrease_maxDur':
             state["maxDur"] -= 1   
+            curr_waitingTime = state["waitingTime"]            
+            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
             return state
         
         elif action == 'increase_max_gap':
             state["max_gap"] += 1
+            curr_waitingTime = state["waitingTime"]            
+            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
             return state
         
         elif action == 'decrease_max_gap':
             state["max_gap"] -= 1
+            curr_waitingTime = state["waitingTime"]            
+            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
             return state
         
         # [1, 3, 5, 7]
+        # Ensure sorted list
         elif action == 'add_next':
             max_next = [1, 3, 5, 7]
             curr_next = state["next"]
@@ -111,10 +150,16 @@ class MarkovDecisionProcess:
             selected_option = random.choice(options_to_add)
             # Append the selected option to curr_next
             curr_next.append(selected_option)
-            state["next"] = curr_next
+            state["next"] = sorted(curr_next)
+            curr_waitingTime = state["waitingTime"]            
+            
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
-            return state
-         
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
+            return state  
+               
         # elif action == 'remove_next':
         # [1,5,7] equal chance of removing any.
         else:
@@ -124,8 +169,28 @@ class MarkovDecisionProcess:
             # Append the selected option to curr_next
             curr_next.remove(selected_option)
             state["next"] = curr_next
+            curr_waitingTime = state["waitingTime"]            
+
+            # Update waiting time state
             state["waitingTime"] = self.extract_waiting_time(self.csv_data, maxDur = str(state["maxDur"]), minDur = str(state["minDur"]), max_gap = str(state["max_gap"]), next = str(state["next"]))
+            if state["waitingTime"] is None: #not in excel yet
+                state["waitingTime"] = curr_waitingTime            
+
             return state
+        
+    def perform_action(self, state, action):
+        # Keep track of the current state
+        curr_state = copy.deepcopy(state)
+
+        # Update the state based on the action
+        self.state = self.transition_function(state, action)
+        next_state = copy.deepcopy(self.state)
+        
+        # Calculate the reward using reward_function
+        reward = round(self.reward_function(curr_state, next_state),2)
+
+        return next_state,reward        
+
 
     '''
     -1 * [WaitingTime(s') - WaitingTime(s)]
@@ -133,8 +198,10 @@ class MarkovDecisionProcess:
     If waiting time increased (deproved): Negative reward
     '''
 
-    def reward_function(self, state, action, next_state):
-        return -1*(float(next_state["waitingTime"]) - float(state["waitingTime"]))
+    def reward_function(self, state, next_state):
+        curr_waiting_time = state["waitingTime"]
+        next_waiting_time = next_state["waitingTime"]
+        return -1*(float(next_waiting_time) - float(curr_waiting_time))
     
     # random walk
     def generate_episode(self):
@@ -142,11 +209,9 @@ class MarkovDecisionProcess:
         while not self.is_terminal(self.state):
             available_actions = self.get_actions(self.state)
             action = np.random.choice(available_actions)
-            next_state = self.transition_function(self.state, action)
-            print(next_state)
-            reward = self.reward_function(self.state, action, next_state)
-            episode.append((self.state, action, reward))
-            self.state = next_state
+            next_state,reward = self.perform_action(self.state,action)
+            episode.append((next_state, action, reward))
+
         return episode
 
     def calculate_discounted_return(self, episode):
@@ -213,26 +278,31 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Example usage:
-    mdp = MarkovDecisionProcess(csv_data, terminal_state=150)
-
+    mdp = MarkovDecisionProcess(csv_data, terminal_state = 300)
+    initial_state = copy.deepcopy(mdp.state)
     # Generate an episode
     episode = mdp.generate_episode()
+
+    print("Initial step:")
+    print(initial_state)
+    print()
 
     # Print the generated episode
     print("Generated Episode:")
     for step in episode:
         print(step)
+        print()
 
-    # Calculate the discounted return for the episode
-    discounted_return = mdp.calculate_discounted_return(episode)
-    print("\nDiscounted Return:", discounted_return)
+    # # Calculate the discounted return for the episode
+    # discounted_return = mdp.calculate_discounted_return(episode)
+    # print("\nDiscounted Return:", discounted_return)
 
-    # Perform value iteration to obtain the optimal value function
-    optimal_value_function,policy = mdp.value_iteration()
+    # # Perform value iteration to obtain the optimal value function
+    # optimal_value_function,policy = mdp.value_iteration()
 
-    # Print the optimal value function
-    print("Optimal Value Function:")
-    print(optimal_value_function)
-    print()
-    print("Policy:")
-    print(policy)
+    # # Print the optimal value function
+    # print("Optimal Value Function:")
+    # print(optimal_value_function)
+    # print()
+    # print("Policy:")
+    # print(policy)
