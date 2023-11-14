@@ -30,6 +30,8 @@ class MCTSNode:
 def select(node):
     # Select a child node using UCT (Upper Confidence Bound for Trees) algorithm
     C = 1.0  # Exploration parameter
+    if not node.children:
+        return None  # No children to select, return None    
     return max(node.children, key=lambda child: child.value / child.visits + C * math.sqrt(2 * math.log(node.visits) / child.visits))
 
 def expand(node):
@@ -66,12 +68,12 @@ def mcts(root_state, num_simulations, max_depth):
     for _ in range(num_simulations):
         node = root_node
 
-        # Selection
-        while not node.children:
-            node = select(node)
-
         # Expansion
         node = expand(node)
+
+        # # Selection
+        # while not node.children:
+        #     node = select(node)
 
         # Simulation
         result = simulate(node, max_depth)
@@ -89,15 +91,15 @@ class State:
         self.status = mdp_state
         self.mdp = mdp
     
-    def get_possible_actions(self, mdp):
+    def get_possible_actions(self):
         return self.mdp.get_actions(self.status) #from mdp_sumo
 
-    def perform_action(self, mdp, action):
+    def perform_action(self, action):
         mdp_next_state = self.mdp.transition_function(self.status, action)
-        return State(mdp, mdp_next_state, action=action)
+        return State(self.mdp, mdp_next_state, action=action)
 
     def get_reward(self, next_state):
-        reward = self.mdp.reward_function(self.status, self.action, next_state)                
+        reward = self.mdp.reward_function(self.status, next_state)                
         return reward
 
 
