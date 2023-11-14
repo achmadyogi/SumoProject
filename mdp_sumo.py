@@ -6,11 +6,9 @@ import argparse
 import copy 
 
 class MarkovDecisionProcess:
-    '''
-    Current terminal_state: Average waiting time <= 150
-    '''
-    def __init__(self, csv_data, terminal_state = 150):
-        # TODO: delta threshold
+
+
+    def __init__(self, csv_data, terminal_state = 300):
         self.terminal_state = terminal_state
         self.csv_data = csv_data
         # initial state
@@ -21,6 +19,22 @@ class MarkovDecisionProcess:
             "next": [1, 3, 5, 7],
             "waitingTime": self.extract_waiting_time(csv_data, maxDur = "51", minDur = "11", max_gap = "1", next = "[1, 3, 5, 7]")
         }
+
+        
+        # TODO: expand the range (this increases state space, might cause value iteration to become intractable)
+        # Currently: 18 states
+        self.bounds = {
+            "maximum_for_maxDur": 51,
+            "minimum_for_maxDur": 51,
+            "maximum_for_minDur": 11,
+            "minimum_for_minDur": 11, 
+            "maximum_for_max_gap": 3,
+            "minimum_for_max_gap": 1,
+            "maximum_for_next": [1, 3, 5, 7],
+            "minimum_for_next": [1, 3, 5, 7]                      
+                    
+        }
+
         self.discount_factor = 0.9  # Discount factor for future rewards
 
     def extract_waiting_time(self,csv_data,maxDur,minDur,max_gap,next):
@@ -36,9 +50,6 @@ class MarkovDecisionProcess:
                 pass
 
         
-    # TODO: Check for convergence 
-    def is_terminal(self, state):
-        return float(state["waitingTime"]) <= self.terminal_state 
 
     def get_actions(self, state):
         actions = [
@@ -53,21 +64,21 @@ class MarkovDecisionProcess:
         ]
 
         # Remove actions that go beyond the upper and lower bounds
-        if state["maxDur"] == 70:
+        if state["maxDur"] == self.bounds["maximum_for_maxDur"]:
             actions.remove('increase_maxDur')
-        if state["maxDur"] == 51:
+        if state["maxDur"] == self.bounds["minimum_for_maxDur"]:
             actions.remove('decrease_maxDur')         
-        if state["minDur"] == 20:
+        if state["minDur"] == self.bounds["maximum_for_minDur"]:
             actions.remove('increase_minDur')
-        if state["minDur"] == 11:
+        if state["minDur"] == self.bounds["minimum_for_minDur"]:
             actions.remove('decrease_minDur')  
-        if state["max_gap"] == 5:
+        if state["max_gap"] == self.bounds["maximum_for_max_gap"]:
             actions.remove('increase_max_gap')
-        if state["max_gap"] == 1:
+        if state["max_gap"] == self.bounds["minimum_for_max_gap"]:
             actions.remove('decrease_max_gap')              
-        if state["next"] == [1, 3, 5, 7]:
+        if state["next"] == self.bounds["maximum_for_next"]:
             actions.remove('add_next')
-        if state["next"] == []:
+        if state["next"] == self.bounds["minimum_for_next"]:
             actions.remove('remove_next')    
 
         return actions
@@ -183,8 +194,10 @@ class MarkovDecisionProcess:
         curr_state = copy.deepcopy(state)
 
         # Update the state based on the action
-        self.state = self.transition_function(state, action)
-        next_state = copy.deepcopy(self.state)
+        # self.state = self.transition_function(state, action)
+        state = self.transition_function(state, action)
+
+        next_state = copy.deepcopy(state)
         
         # Calculate the reward using reward_function
         reward = round(self.reward_function(curr_state, next_state),2)
@@ -214,41 +227,79 @@ class MarkovDecisionProcess:
 
         return episode
 
+    # calculate utility
     def calculate_discounted_return(self, episode):
+        # each episode: (next_state, action, reward)
         G = 0
-        for t, (_, _, reward) in enumerate(reversed(episode)):
+        for idx, (_, _, reward) in enumerate(reversed(episode)):
+            # Reversed so that the final action gets multiplied with discount_factor^n times if n steps
+            # The first action is added as "+ reward"
+            # Future actions hold less weight in deciding utility now
             G = G * self.discount_factor + reward
         return G
 
     def value_iteration(self, epsilon=0.01):
-            V = np.zeros(self.grid_size)
-            policy = np.zeros(self.grid_size, dtype='<U5')  # Initialize policy with empty strings
+            # V array is a value function table that stores the estimated utility for each possible combination of state variables in MDP.
+            V = np.zeros((self.bounds["maximum_for_maxDur"] - self.bounds["minimum_for_maxDur"] + 1, #3
+                        self.bounds["maximum_for_minDur"] - self.bounds["minimum_for_minDur"] + 1, #3
+                        self.bounds["maximum_for_max_gap"] - self.bounds["minimum_for_max_gap"] + 1,  #2
+                        2**(len(self.bounds["maximum_for_next"]) - len(self.bounds["minimum_for_next"])) # 1 
+                        ))        
+            
+            policy = np.empty(V.shape, dtype="<U40")
 
             while True:
-                delta = 0
-                for i in range(self.grid_size[0]):
-                    for j in range(self.grid_size[1]):
-                        state = (i, j)
-                        if not self.is_terminal(state):
-                            v = V[i, j] #at initialized state (0,0)
-                            action_values = []
-                            for action in self.get_actions(state):
-                                next_state = self.transition_function(state, action)
-                                reward = self.reward_function(state, action, next_state)
-                                next_value = V[next_state[0], next_state[1]]
-                                action_values.append(reward + self.discount_factor * next_value)
+                        delta = 0
+                        for maxDur in range(self.bounds["minimum_for_maxDur"], self.bounds["maximum_for_maxDur"] + 1):
+                            for minDur in range(self.bounds["minimum_for_minDur"], self.bounds["maximum_for_minDur"] + 1):
+                                for max_gap in range(self.bounds["minimum_for_max_gap"], self.bounds["maximum_for_max_gap"] + 1):
+                                    next = [1, 3, 5, 7]
+                                    state = {
+                                        'maxDur': maxDur,
+                                        'minDur': minDur,
+                                        'max_gap': max_gap,
+                                        'next': next,
+                                        'waitingTime': self.extract_waiting_time(csv_data, maxDur, minDur, max_gap, next="[1, 3, 5, 7]")
+                                    }
 
-                            # Update the value function and policy
-                            best_action_index = np.argmax(action_values)
-                            V[i, j] = max(action_values)
-                            policy[i, j] = self.get_actions(state)[best_action_index]
-                            delta = max(delta, abs(v - V[i, j]))
+                                    v = V[maxDur - self.bounds["minimum_for_maxDur"],
+                                        minDur - self.bounds["minimum_for_minDur"],
+                                        max_gap - self.bounds["minimum_for_max_gap"],
+                                        0]  # because only consider 1 option for next currently
 
-                if delta < epsilon:
-                    break
+                                    action_values = []
+                                    for action in self.get_actions(state):  # available_actions
+                                        next_state, reward = self.perform_action(state, action)
+                                        next_value = V[next_state['maxDur'] - self.bounds["minimum_for_maxDur"],
+                                                    next_state['minDur'] - self.bounds["minimum_for_minDur"],
+                                                    next_state['max_gap'] - self.bounds["minimum_for_max_gap"],
+                                                    0]  # because only consider 1 option for next currently
+                                        action_values.append(reward + self.discount_factor * next_value)
 
+                                    # Update the value function and policy
+                                    best_action_index = np.argmax(action_values)  # Minimize reward
+
+                                    V[maxDur - self.bounds["minimum_for_maxDur"],
+                                    minDur - self.bounds["minimum_for_minDur"],
+                                    max_gap - self.bounds["minimum_for_max_gap"],
+                                    0] = max(action_values)
+
+                                    policy[maxDur - self.bounds["minimum_for_maxDur"],
+                                        minDur - self.bounds["minimum_for_minDur"],
+                                        max_gap - self.bounds["minimum_for_max_gap"],
+                                        0] = self.get_actions(state)[best_action_index]
+
+
+                                    # print(best_action_index)
+                                    delta = max(delta, abs(v - V[maxDur - self.bounds["minimum_for_maxDur"],
+                                                                minDur - self.bounds["minimum_for_minDur"],
+                                                                max_gap - self.bounds["minimum_for_max_gap"],
+                                                                0]))
+
+                        if delta < epsilon:
+                            break
             return V, policy
-    
+
 def read_csv_file(file_path):
     data = []
     with open(file_path, 'r') as file:
@@ -278,31 +329,38 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Example usage:
-    mdp = MarkovDecisionProcess(csv_data, terminal_state = 300)
-    initial_state = copy.deepcopy(mdp.state)
-    # Generate an episode
-    episode = mdp.generate_episode()
+    mdp = MarkovDecisionProcess(csv_data, terminal_state = 100)
+    # initial_state = copy.deepcopy(mdp.state)
+    # # Generate an episode
+    # episode = mdp.generate_episode()
 
-    print("Initial step:")
-    print(initial_state)
-    print()
+    # print("Initial step:")
+    # print(initial_state)
+    # print()
 
-    # Print the generated episode
-    print("Generated Episode:")
-    for step in episode:
-        print(step)
-        print()
+    # # Print the generated episode
+    # print("Generated Episode:")
+    # for step in episode:
+    #     print(step)
+    #     print()
 
     # # Calculate the discounted return for the episode
     # discounted_return = mdp.calculate_discounted_return(episode)
     # print("\nDiscounted Return:", discounted_return)
 
     # # Perform value iteration to obtain the optimal value function
-    # optimal_value_function,policy = mdp.value_iteration()
+    optimal_value_function,policy = mdp.value_iteration()
 
-    # # Print the optimal value function
-    # print("Optimal Value Function:")
-    # print(optimal_value_function)
-    # print()
-    # print("Policy:")
-    # print(policy)
+    # Print the optimal value function
+    print("Optimal Value Function:")
+    print(optimal_value_function)
+    print()
+    print("Policy:")
+    print(policy)
+    # # Write the optimal value function to a file
+    # with open("optimal_value_function.txt", "w") as f:
+    #     f.write(str(optimal_value_function))
+
+    # # Write the policy to a file
+    # with open("policy.txt", "w") as f:
+    #     f.write(str(policy))    
