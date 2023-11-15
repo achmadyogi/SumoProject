@@ -68,12 +68,12 @@ def mcts(root_state, num_simulations, max_depth):
     for _ in range(num_simulations):
         node = root_node
 
-        # Expansion
-        node = expand(node)
-
         # # Selection
         # while not node.children:
         #     node = select(node)
+
+        # Expansion
+        node = expand(node)
 
         # Simulation
         result = simulate(node, max_depth)
@@ -98,8 +98,10 @@ class State:
         mdp_next_state = self.mdp.transition_function(self.status, action)
         return State(self.mdp, mdp_next_state, action=action)
 
-    def get_reward(self, next_state):
-        reward = self.mdp.reward_function(self.status, next_state)                
+    def get_reward(self, next_state): #next_state must be mdp_next_state
+        if self.status["waitingTime"] == None or next_state.status["waitingTime"] == None:
+            return 0
+        reward = self.mdp.reward_function(self.status, next_state.status)                
         return reward
 
 
