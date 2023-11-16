@@ -130,7 +130,7 @@ class State:
         # next_waiting_time = next_state["waitingTime"]
         # return -1*(float(next_waiting_time) - float(curr_waiting_time))
         
-        return self.wait_time
+        return 1./self.wait_time
 
 ######################################
 # TCL set up
