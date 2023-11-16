@@ -125,12 +125,12 @@ class State:
                             ]["idx"].values[0]
         return State(id = id, action=action, wait_time=df_waiting_time[df_waiting_time.idx==id]['waiting_time'].values[0])
 
-    def get_reward(self):
+    def get_reward(self): 
         # curr_waiting_time = state["waitingTime"]
         # next_waiting_time = next_state["waitingTime"]
         # return -1*(float(next_waiting_time) - float(curr_waiting_time))
         
-        return 1./self.wait_time
+        return 1./self.wait_time 
 
 ######################################
 # TCL set up
