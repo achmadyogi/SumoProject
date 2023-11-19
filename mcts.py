@@ -1,3 +1,5 @@
+
+
 import pandas as pd
 import os
 import sys
@@ -85,7 +87,7 @@ def mcts(root_state, num_simulations, max_depth):
     # Return the best action based on visit counts
     return max(root_node.children, key=lambda child: child.visits).state.action
 
-# Example usage:
+
 class State:
     def __init__(self, id=None, action=None, param=None ,wait_time=None):
         self.action = action # a set of how to modify param
@@ -130,7 +132,8 @@ class State:
         # next_waiting_time = next_state["waitingTime"]
         # return -1*(float(next_waiting_time) - float(curr_waiting_time))
         
-        return 1./self.wait_time 
+        # Struggling with getting back to parent node to get diff(waiting_time) between states
+        return 1./self.wait_time #Use default rewards not the proposed in slides
 
 ######################################
 # TCL set up
@@ -171,7 +174,8 @@ df_action_space = df[['idx','inMaxGap','deMaxGap','inMinDur','deMinDur','inMaxDu
 
 
 ######################################
-# "python mcts.py mindur maxdur maxgap\n"
+# Example usage:
+# >>> python mcts.py mindur maxdur maxgap
 if __name__ == "__main__":
     args = sys.argv[1:]
     if len(args) != 3: 
