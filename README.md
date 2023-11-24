@@ -1,2 +1,3 @@
 # CS5446 Project
-Welcome!
+To run the value iteration, run:
+!python mdp.py -p result_16000.csv
